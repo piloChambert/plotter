@@ -283,10 +283,10 @@ void parseCommand() {
     LOG("\n");
 
     valid = false;
-    Serial.println("Unknown Command ");
+    Serial.print("Unknown Command ");
     Serial.print(serialBuffer[0]);
     Serial.print(serialBuffer[1]);
-    Serial.print("\n");
+    Serial.println(";");
   }
 
   if(valid)
