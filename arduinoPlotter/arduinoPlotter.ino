@@ -213,14 +213,37 @@ void moveTo(int targetX, int targetY) {
  *************************************/
 char serialBuffer[64];
 char *serialBufferPtr = serialBuffer;
-int parseInt(char *&ptr) {
-  int v = 0;
+bool parseInt(int &v, char *&ptr) {
+  bool negative = false;
+
+  // first remove space
+  while(isspace(*ptr)) {
+    ptr++;
+  }
+
+  // < 0?
+  if(*ptr == '-') {
+    negative = true;
+    ptr++;
+  }
+
+  if(!isdigit(*ptr)) {
+    // no number here!
+    return false;
+  }
+
+  // parse the number
+  v = 0;
   while(isdigit(*ptr) && *ptr != 0) {
     v = v * 10 + (*ptr - '0');
     ptr++;
   }
 
-  return v;
+  if(negative) {
+    v = -v;
+  }
+
+  return true;
 }
 
 void parseCommand() {
@@ -234,40 +257,73 @@ void parseCommand() {
   }
 
   else if(strncmp(serialBuffer, "IP", 2) == 0) {
-    // reset origin
-    x = 0;
-    y = 0;
-
     LOG("Set initial point");
+  }
+
+  else if(strncmp(serialBuffer, "SC", 2) == 0) {
+    
   }
   
   else if(strncmp(serialBuffer, "PD", 2) == 0) {
+    // move pen down
+    movePenUp(false);    
+
+    // and move if needed
     char *p = &serialBuffer[2];
-    int x = parseInt(p) / xScale; p++;
-    int y = parseInt(p) / yScale;
-    
-    LOG("Pen Down(");
-    LOG(x);
-    LOG(", ");
-    LOG(y);
-    LOG(")\n");
-    
-    movePenUp(false);
-    moveTo(x, y);  
+    int x, y;
+    if(parseInt(x, p) && parseInt(y, ++p)) {
+      x = x / xScale;
+      y = y / yScale;
+
+      LOG("Pen Down(");
+      LOG(x);
+      LOG(", ");
+      LOG(y);
+      LOG(")\n");    
+
+      moveTo(x, y);  
+    } else {
+      LOG("Pen Down\n");
+    }
   }
   else if(strncmp(serialBuffer, "PU", 2) == 0) {
+    // move pen up
+    movePenUp(true);    
+
+    // and move if needed
     char *p = &serialBuffer[2];
-    int x = parseInt(p) / xScale; p++;
-    int y = parseInt(p) / yScale;
+    int x, y;
+    if(parseInt(x, p) && parseInt(y, ++p)) {
+      x = x / xScale;
+      y = y / yScale;
 
-    LOG("Pen Up(");
-    LOG(x);
-    LOG(", ");
-    LOG(y);
-    LOG(")\n");
+      LOG("Pen Down(");
+      LOG(x);
+      LOG(", ");
+      LOG(y);
+      LOG(")\n");    
 
-    movePenUp(true);
-    moveTo(x, y);    
+      moveTo(x, y);  
+    } else {
+      LOG("Pen Down\n");
+    }
+  }
+  else if(strncmp(serialBuffer, "PA", 2) == 0) {
+    char *p = &serialBuffer[2];
+    
+    int x, y;
+    if(parseInt(x, p) && parseInt(y, ++p)) {
+      x = x / xScale;
+      y = y / yScale;
+
+      LOG("Pen Absolute(");
+      LOG(x);
+      LOG(", ");
+      LOG(y);
+      LOG(")\n");
+    
+      moveTo(x, y);    
+    }
   }
   else if(strncmp(serialBuffer, "SP", 2) == 0) {
     int pen = Serial.parseInt();

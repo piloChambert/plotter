@@ -96,19 +96,38 @@ int commandCount = 0; // total number of command
 float totalDistance = 0.0f; // total distance of the pen
 HPGLCommand *commandBuffer = NULL;
 
-int readNumber(char *ptr, char **endPtr) {
-  int v = 0;
+// return 1 if number read, 0 otherwise
+int parseInt(int *v, char **ptr) {
+  int negative = 0;
 
-  while(isdigit(*ptr)) {
-    v = v * 10 + (*ptr - '0');
-    ptr++;
+  // first remove space
+  while(isspace(**ptr)) {
+    (*ptr)++;
   }
 
-  if(endPtr != NULL) {
-    *endPtr = ptr;
+  // < 0?
+  if(**ptr == '-') {
+    negative = 1;
+    (*ptr)++;
   }
 
-  return v;
+  if(!isdigit(**ptr)) {
+    // no number here!
+    return 0;
+  }
+
+  // parse the number
+  *v = 0;
+  while(isdigit(**ptr) && **ptr != 0) {
+    *v = *v * 10 + (**ptr - '0');
+    (*ptr)++;
+  }
+
+  if(negative) {
+    *v = -*v;
+  }
+
+  return 1;
 }
 
 // process HPGL file
@@ -133,6 +152,10 @@ void processHPGLFile(const char *hpglFilename) {
   commandBuffer = (HPGLCommand *)malloc(sizeof(HPGLCommand) * commandBufferSize);
 
   while((c = fgetc(hpglFile)) != EOF) {
+    // accept only alpha, num and ;
+    if(!(isalpha(c) || isdigit(c) || c == ';' || c == ','))
+      continue;
+
     *bufferPtr = c;
     bufferPtr++;
 
@@ -153,22 +176,26 @@ void processHPGLFile(const char *hpglFilename) {
 
       // handle the command
       float dist = 0;
-      if((strncmp(buffer, "PD", 2) == 0) || (strncmp(buffer, "PU", 2) == 0)) {
-	char *ptr;
-	int x = readNumber(&buffer[2], &ptr);
-	int y = readNumber(++ptr, NULL);
+      if((strncmp(buffer, "PD", 2) == 0) || (strncmp(buffer, "PU", 2) == 0) || (strncmp(buffer, "PA", 2) == 0)) {
+	char *ptr = &buffer[2];
+	int x, y;
 
-	float _x = x - currentX;
-	float _y = y - currentY;
+	if(parseInt(&x, &ptr) 
+	   && ++ptr 
+	   && *ptr != 0 
+	   && parseInt(&y, &ptr)) {
+	  float _x = x - currentX;
+	  float _y = y - currentY;
 
-	dist = sqrtf(_x * _x + _y * _y);
+	  dist = sqrtf(_x * _x + _y * _y);
 
-	totalDistance += dist;
+	  totalDistance += dist;
 
-	//printf("%d, %d %f\n", x, y, dist);
+	  //printf("%d, %d %f\n", x, y, dist);
 
-	currentX = x;
-	currentY = y;
+	  currentX = x;
+	  currentY = y;
+	}
       }
 
       strcpy(commandBuffer[commandCount].commandStr, buffer);
